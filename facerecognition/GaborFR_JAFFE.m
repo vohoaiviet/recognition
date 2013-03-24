@@ -1,15 +1,15 @@
 function [recogResult]= GaborFR_JAFFE(trainImagePath, testImagePath, imageLable)
-%% CCFR recognition the facial expression
+%% CCFR recognition the facial expression on database JAFFE
 %TRAINIMAGEPATH      ---Train image path
 %TESTIMAGEPATH      ---Test image path
 %IMAGELABLE      ---The infomation of trainning set
 %RECOGRESULT      ---Whether the test is successful.
 
+
 %%
 disp('This Program is written by DIP&PG Group');
 fprintf('Computing Center\nSchool of Science and Engineering\nEast China Normal University\n');
 disp('Any questions, please contact cisjiong@gmail.com');
-
 recogResult = 0;
 
 
