@@ -2,6 +2,10 @@
 clear all;
 close all;
 
+% train and test folder
+mkdir('ORLTrain');
+mkdir('ORLTest');
+
 % get ORL database file
 ORL_DB = dir('.\ORL');
 [n, ~] = size(ORL_DB);
