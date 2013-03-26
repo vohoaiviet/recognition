@@ -7,8 +7,8 @@ Face Recognition using 2DPCA
 3. Run gen_labelfile_orl to generate 'orl_label.txt' for testing.
 
 4. Experiments
-	4a. Run FR_2DPCA to calculate the accuracy.
-	4b. Run TDPCA_REC to test image reconstructed
+	4a. Run FR_2DPCA.m to calculate the accuracy.
+	4b. Run TDPCA_REC.m to test image reconstructed
 
 
 =============================================
