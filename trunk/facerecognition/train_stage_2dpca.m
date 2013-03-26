@@ -1,4 +1,4 @@
-function [projected_face, matrix_2dpca, train_face_name] = train_stage_2dpca(train_face_path, label_file_name)
+function [projected_face, matrix_2dpca, train_face_name, eigenval] = train_stage_2dpca(train_face_path, label_file_name)
 %% TRAIN_STAGE is the training stage of face recognition system
 %train_face_path      ---is the training face folder
 %label_file_name      ---is the label file name
@@ -19,4 +19,4 @@ for i = 1 : train_face_num
 end
 
 %% apply 2DPCA
-[projected_face, matrix_2dpca] = TDPCA(train_image, 10);
+[projected_face, matrix_2dpca, eigenval] = TDPCA(train_image, 10);
