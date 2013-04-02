@@ -1,5 +1,5 @@
 function [local_blocks, lbw, lbh, block_num, uniform_image] = PreprocessPartition(facial_image, width, height, ratio)
-%% Preprocesspartition achieve a uniform image size of 164 X 127and divide image into several local regions.
+%% Preprocesspartition achieve a uniform image size of 144 X 127and divide image into several local regions.
 %facial_image      ---the origin facial image
 %width      ---the width of faical image
 %height      ---the height of facial image
@@ -13,7 +13,7 @@ function [local_blocks, lbw, lbh, block_num, uniform_image] = PreprocessPartitio
 %% preprocessing
 cx = width / 2;
 cy = height / 2;
-uniform_image = facial_image(cy - 71:cy + 92, cx - 60:cx + 66);
+uniform_image = facial_image(cy - 51:cy + 92, cx - 60:cx + 66);
 
 
 %% partition
@@ -23,7 +23,7 @@ h = 1;
 temp = 2 * ratio - 1;
 
 lbw = floor(127 / ratio);
-lbh = floor(164 / ratio);
+lbh = floor(144 / ratio);
 local_blocks = uint8(zeros(lbh, lbw, temp ^ 2));
 
 % the neighboring local regions are designed to have 50% overlap
