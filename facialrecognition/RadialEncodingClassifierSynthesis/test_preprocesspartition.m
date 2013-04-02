@@ -2,6 +2,21 @@
 clear all;
 close all;
 
+
+%% test preprocess
+fid = fopen('.\test_fun_pic\test1_name.txt');
+facial_name_cell = textscan(fid, '%s');
+for i = 1 : length(facial_name_cell{1, 1})
+    %fprintf('%s', cell2mat(facial_name_cell{1, 1}(i)));
+    facial_image = imread(['.\test_fun_pic\', cell2mat(facial_name_cell{1, 1}(i))]);
+    [height, width] = size(facial_image);
+    [~, ~, ~, ~, uniform_image] = PreprocessPartition(facial_image, width, height, 3);
+    subplot(2, 5, i);
+    imshow(uniform_image);
+end
+
+
+%% test partition
 % process the function
 facial_image = imread('.\test_fun_pic\YM.HA1.52.tiff');
 [height, width] = size(facial_image);
