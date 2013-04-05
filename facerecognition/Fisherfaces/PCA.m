@@ -1,4 +1,4 @@
-function [mapped_data, eigenvec] = PCA(data, comp)
+function [mapped_data, eigenvec, col_mean] = PCA(data, comp)
 %% PCA used for principal components analysis
 %data      ---the data for principal components analysis
 %comp      ---number of components selected

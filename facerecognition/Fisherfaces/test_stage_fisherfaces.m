@@ -1,5 +1,5 @@
-function [accuracy] = test_stage_fisherfaces(test_face_path, projected_face, pca_matrix, train_face_name)
-% function [accuracy, tf_n, tf_d] = test_stage_fisherfaces(test_face_path, projected_face, pca_matrix, fld_matrix, train_face_name)
+%function [accuracy] = test_stage_fisherfaces(test_face_path, projected_face, pca_matrix, train_face_name)
+function [accuracy] = test_stage_fisherfaces(test_face_path, projected_face, pca_matrix, fld_matrix, train_face_name)
 %% TEST_STAGE_FISHERFACES is the training stage of face recognition system using Fisherfaces
 %test_face_path      ---is the testing face folder
 %projected_face      ---is the result of train face in train stage
@@ -23,8 +23,9 @@ accuracy = 0;
 min_dis = zeros(200, 1);
 min_idx = zeros(200, 1);
 
+
 %% read each test face and process
-[n, dim] = size(projected_face);
+[n, ~] = size(projected_face);
 for i = 1 : file_num
     if (~test_face_name(i).isdir)
         test_face_num = test_face_num + 1;
@@ -35,15 +36,14 @@ for i = 1 : file_num
         
         %project test image using PCA and FLD matrix
         test_face = test_face(:);
-        % pca_fld_projected = (test_face' * pca_matrix) * fld_matrix;
-        pca_fld_projected = test_face' * pca_matrix;
+        test_face = test_face / norm(test_face);
+        pca_fld_projected = (test_face' * pca_matrix) * fld_matrix;
+        %pca_fld_projected = test_face' * pca_matrix;
         
         %nearest neighbor classifier
         dis = zeros(n, 1);
         for ii = 1 : n
-            for jj = 1 : dim
-                dis(ii) = dis(ii) + (projected_face(ii, jj) - pca_fld_projected(jj)) ^ 2;
-            end
+            dis(ii) = norm(projected_face(ii, :) - pca_fld_projected);
         end
         
         [min_dis(test_face_num), min_idx(test_face_num)] = min(dis);
