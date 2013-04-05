@@ -49,6 +49,10 @@ for i = 1 : class_num
     Sw = Si(:, :, i) + Sw;
 end
 
+% overcome over-fitting
+[~, eig_val] = eig(Sw);
+ave_eigv = mean(nonzeros(diag(eig_val)));
+Sw = Sw + ave_eigv;
 
 %% seek the direction w. See formula (8)
 [W, eigenval] = eig(Sw \ Sb);
@@ -60,6 +64,9 @@ WW = W;
 
 % return paramaters
 W = W(:, 1 : class_num - 1);
+for i = 1 : class_num - 1
+    W(:, i) = W(:, i) / norm(W(:, i));
+end
 projected_sample = sample' * W;
 
 
