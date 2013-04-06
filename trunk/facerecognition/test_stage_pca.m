@@ -29,9 +29,8 @@ for i = 1 : file_num
         test_face = imread([test_face_path, '\', file_name]);
         
         %project test image
-        test_face = test_face(:);
-        test_face = double(test_face');
-        test_face_projected = test_face * matrix_pca;
+        test_face = double(test_face(:));
+        test_face_projected = test_face' * matrix_pca;
         
         %nearest neighbor classifier
         dis = zeros(n, 1);
