@@ -20,5 +20,5 @@ for i = 1 : train_face_num
 end
 
 %% apply PCA
-[pca_mapped_image, matrix_pca] = PCA(train_image, 40);
+[pca_mapped_image, matrix_pca] = PCA(train_image, 160);
 projected_face = pca_mapped_image;
