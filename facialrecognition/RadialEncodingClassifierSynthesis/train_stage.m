@@ -1,0 +1,136 @@
+function [facial_feature, fld_projected, pca_matrix1, fld_matrix, pca_matrix2, rfld_matrix, class_label] = train_stage(train_set_path, ratio)
+%% TRAIN_STAGE is the training stage of facial recognition system
+%train_set_path      ---the path of the train set directory
+%ratio      ---used in partition
+%pca_matrix1      ---PCA projected matrix befor FLD
+%fld_matrix      ---FLD projected matrix
+%pca_matrix2      ---PCA projected matrix after KNN
+%rfld_matrix      ---RFLD projected matrix
+%facial_feature      ---global feature after RFLD
+%fld_projected      ---local feature after FLD
+%class_label      ---the label for FLD
+%class_num      ---the number of class
+
+
+%% get all train images
+train_file_name = dir([train_set_path, '\.*tiff']);
+train_file_num = length(train_file_name);
+
+% local feature
+local_feature_array = zeros(720, 3 * (2 * ratio -1)^2 * train_file_num);
+
+% gabor filter mask
+gabor_mask = GenGaborFilter;
+
+%% local feature from radial encoding of local Gabor features
+for train_file_idx = 1 : train_file_num
+    train_file = imread(train_file_name{train_file_idx}.name);
+    [height, width] = size(train_file);
+    
+    % preprocess and partition
+    [local_blocks, lbw, lbh, block_num] = PreprocessPartition(train_file, width, height, ratio);
+    
+    % Gabor filter
+    gabor_filter_result = zeros(lbh, lbw, 24, block_num);
+    for local_block_idx = 1 : block_num
+        gabor_filter_result(:, :, :, local_block_idx) = GaborFilter(local_blocks(:, :, local_block_idx), gabor_mask);
+    end
+    
+    % radial encode
+    radial_encode_result = zeros(90 * 8, 3 * block_num);
+    radial_encode_idx = 1;
+    for local_block_idx = 1 : block_num
+        for gb_scale = 1 : 3
+            gb_orientation_res = zeros(90, 8);
+            for gb_orientation = 1 : 8
+                radial_encode_res = RadialEncode(gabor_filter_result(:, :, (gb_scale - 1) * 8 + gb_orientation, local_block_idx));
+                gb_orientation_res(:, gb_orientation) = radial_encode_res(:);
+            end
+            radial_encode_result(:, radial_encode_idx) = gb_orientation_res(:);
+            radial_encode_idx = radial_encode_idx + 1;
+        end
+    end
+    local_feature_array(:, (train_file_idx - 1) * 3 * block_num + 1 : train_file_idx * 3 * block_num) = radial_encode_result;
+end
+
+
+%% classifier synthesis
+% generate label file
+class_label = zeros(train_file_num * 3 * (2 * ratio - 1)^2, 1, 'uint8');
+class_num = 7;
+for train_file_idx = 1 : train_file_num
+    switch(train_file_name{train_file_idx}.name(4 : 5))
+        case 'AN' 
+            label = 1;
+        case 'DI' 
+            label = 2;
+        case 'FE' 
+            label = 3;
+        case 'HA' 
+            label = 4;
+        case 'SA' 
+            label = 5;
+        case 'SU' 
+            label = 6;
+        case 'NE' 
+            label = 7;
+        otherwise
+            disp('Unknow expression!');
+            return;
+    end
+    class_label((train_file_idx - 1) * 3 * block_num + 1 : train_file_idx * 3 * block_num) = label;
+end
+
+% use PCA to reduce the dimension of the local features and select (n-C)
+% principal components to represnet the input data.
+local_features = local_feature_array';
+[n, ~] = size(local_feature);
+[eig_vec, ~] = princomp(local_features, 'econ');
+pca_matrix1 = eig_vec(:, 1 : n - class_num);
+for eig_vec_idx = 1 : n - class_num
+    pca_matrix1(:, eig_vec_idx) = pca_matrix1(:, eig_vec_idx) / norm(pca_matrix1(:, eig_vec_idx));
+end
+pca1_projected_local_features = local_features * pca_matrix1;
+
+
+% use Fisher linear discriminant(FLD) analysis to seek a projection for
+% each local feature such that it can be optimally separated from the
+% others.
+fld_input_samples = pca1_projected_local_features';
+fld_matrix = FLD(fld_input_samples, class_label, class_num);
+fld_projected = pca1_projected_local_features * fld_matrix;
+% normalized to have zero mean and unit standard deviation
+fld_projected = mapstd(fld_projected, 0, 1);
+
+% local decision in train stage. for each class c we set Pc to one and others to zero.
+local_classifiers_output = zeros(class_num, block_num * 3, train_file_num);
+for train_file_idx = 1 : train_file_num
+    local_classifiers_output(class_labele(train_file_idx * 3 * block_num), 1 : block_num * 3, train_file_idx) = 1;
+end
+
+% concatenating the outputs of all local classifiers to generate its
+% intermediate feature matrix
+intermediate_feature = zeros(class_num * block_num * 3, train_file_num);
+for train_file_idx = 1 : train_file_num
+    intermediate_feature(:, train_file_idx) = local_classifiers_output(:, :, train_file_idx);
+end
+
+% apply PCA to project the intermediate feature matrice on to
+% low_dimensional subspace.
+pca2_input_samples = intermediate_feature';
+[eig_vec, ~] = princomp(pca2_input_samples, 'ecno');
+pca_matrix2 = eig_vec(:, 1 : n - class_num);
+for eig_vec_idx = 1 : n - class_num
+    pca_matrix2(:, eig_vec_idx) = pca_matrix2(:, eig_vec_idx) / norm(pca_matrix2(:, eig_vec_idx));
+end
+pca2_projected_local_features = pca2_input_samples * pca_matrix2;
+
+% apply RFLD to project the intermediate feature matrices onto a
+% discriminating , low-dimensional subspace.
+Nc = 25;
+rfld_input_samples = pca2_projected_local_features';
+[rfld_matrix, facial_feature] = RFLD(rfld_input_samples, class_label, class_num, Nc);
+
+% normalized the global features after RFLD to  have zero mean and unit
+% standard
+facial_feature = mapstd(facial_feature, 0, 1);
