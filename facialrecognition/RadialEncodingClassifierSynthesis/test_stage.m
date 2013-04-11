@@ -13,8 +13,9 @@ function [accuracy] = test_stage(test_set_path, facial_feature, fld_projected, p
 
 
 %% get all test images
-test_file_name = dir([test_set_path, '\.*tiff']);
+test_file_name = dir([test_set_path, '\*.tiff']);
 test_file_num = length(test_file_name);
+train_file_num = length(class_label);
 class_num = 7;
 
 % for each test image get its minimum distance and minimum indice of train
@@ -26,7 +27,8 @@ min_idx = zeros(test_file_num, 1, 'uint8');
 gabor_mask = GenGaborFilter;
 
 for test_file_idx = 1 : test_file_num
-    test_file = imread(test_file_name{test_file_idx}.name);
+    test_file = imread([test_set_path, '\', test_file_name(test_file_idx).name]);
+    fprintf('Loading test image: %s... \n', test_file_name(test_file_idx).name);
     [height, width] = size(test_file);
     
     % preprocess and partition
@@ -45,7 +47,7 @@ for test_file_idx = 1 : test_file_num
         for gb_scale = 1 : 3
             gb_orientation_res = zeros(90, 8);
             for gb_orientation = 1 : 8
-                radial_encode_res = RadialEncode(gabor_filter_result(:, :, (gb_scale - 1) * 8 + gb_orientation, local_block_idx));
+                radial_encode_res = RadialEncode(gabor_filter_result(:, :, (gb_scale - 1) * 8 + gb_orientation, local_block_idx), lbw, lbh);
                 gb_orientation_res(:, gb_orientation) = radial_encode_res(:);
             end
             radial_encode_result(:, radial_encode_idx) = gb_orientation_res(:);
@@ -56,31 +58,39 @@ for test_file_idx = 1 : test_file_num
     
     % apply PCA to the result of radial encoding
     local_features = local_feature_array';
-    pca1_projected_local_features = local_features * pca_matrix1;
+    pca1_projected_local_features = zeros(3 * block_num, train_file_num - class_num);
+    for local_block_idx = 1 : block_num * 3
+        pca1_projected_local_features(local_block_idx, :) = local_features(local_block_idx, :) * pca_matrix1(:, :, local_block_idx);
+    end
     
     % apply FLD to project feature matrices on to a discriminating,
     % low-dimensional subspace.
-    fld_projected_local_features = pca1_projected_local_features * fld_matrix;
-    % normalized to have zero mean and unit standard deviation
-    fld_projected_local_features = mapstd(fld_projected_local_features, 0, 1);
-    
+    fld_projected_local_features = zeros(3 * block_num, class_num - 1);
+    for local_block_idx = 1 : block_num * 3
+        fld_projected_local_features(local_block_idx, :) = pca1_projected_local_features(local_block_idx, :) * fld_matrix(:, :, local_block_idx);
+        fld_projected_local_features(local_block_idx, :) = mapstd(fld_projected_local_features(local_block_idx, :));
+    end
+
     % local classifier k-nearest neighbor(KNN) with k = 1. Th ouput of KNN
     % is C-Dimensional vector as estimated probabilities of the C classes.
     % see formula (4)
     local_classifiers_output = zeros(class_num, block_num * 3);
-    [train_vec_num, ~] = size(fld_projected);
+    train_vec_num = size(fld_projected, 1);
+    
+    dis = zeros(class_num, 1);
+    probabilities = zeros(class_num, 1);
     for local_block_idx = 1 : block_num * 3
-        dis = zeros(class_num, 1);
-        probabilities = zeros(class_num, 1);
+        temp_projected = fld_projected(:, :, local_block_idx);
         dis(1 : class_num) = realmax;
         for train_vec_idx = 1 : train_vec_num
-            dis(class_label(train_vec_idx)) = min(dis(class_label(train_vec_idx)), norm(fld_projected_local_features(local_block_idx, :) - fld_projected(train_vec_idx, :)));
+            distance = norm(fld_projected_local_features(local_block_idx, :) - temp_projected(train_vec_idx, :));
+            dis(class_label(train_vec_idx)) = min(dis(class_label(train_vec_idx)), distance);
         end
         
         denominator = 0;
         for i = 1 : class_num
             denominator = denominator + 1 / (dis(i) + 1);
-        end
+        end 
         
         for pro_idx = 1 : class_num
             probabilities(pro_idx) = 1 / (dis(i) + 1) / denominator;
@@ -94,7 +104,7 @@ for test_file_idx = 1 : test_file_num
     
     % apply PCA to project the intermediate feature matrice on to
     % low_dimensional subspace.
-    pca2_projected_global_features = intermediate_feature * pca_matrix2;
+    pca2_projected_global_features = intermediate_feature' * pca_matrix2;
     
     % apply RFLD to project the intermediate feature matrices onto a
     % discriminating , low-dimensional subspace.
@@ -104,29 +114,29 @@ for test_file_idx = 1 : test_file_num
     % standard
     global_features = mapstd(rfld_projected_global_features, 0, 1);
     
-    
     % a nearest-neighbor classifier to make final decision-making stage.
     for global_feature_idx = 1 : train_vec_num
-        dis(global_feature_idx) = normal(global_features - facial_feature(global_feature_idx, :));
+        dis(global_feature_idx) = norm(global_features - facial_feature(global_feature_idx, :));
     end
     [min_dis(test_file_idx), min_idx(test_file_idx)] = min(dis);
 end
 
 % a map from facial expression to label;
-label_map = cell(1, 1);
-label_map{1, 1}(1) = 'AN';
-label_map{1, 1}(2) = 'DI';
-label_map{1, 1}(3) = 'FE';
-label_map{1, 1}(4) = 'HA';
-label_map{1, 1}(5) = 'SA';
-label_map{1, 1}(6) = 'SU';
-label_map{1, 1}(7) = 'NE';
+label_map = cell(7, 1);
+label_map{1} = 'AN';
+label_map{2} = 'DI';
+label_map{3} = 'FE';
+label_map{4} = 'HA';
+label_map{5} = 'SA';
+label_map{6} = 'SU';
+label_map{7} = 'NE';
 
 % calculate the accuracy
 accuracy = 0;
 for test_file_idx = 1 : test_file_num
-    real_expression = test_file_name{test_file_idx}.name(4 : 5);
-    test_expression = label_map{1, 1}(class_label(min_idx(test_file_idx)));
+    real_expression = test_file_name(test_file_idx).name(4 : 5);
+    test_expression = label_map{(class_label(min_idx(test_file_idx)))};
+    fprintf('real expression: %s, test expression: %s, minnimum distance %f\n', real_expression, test_expression, min_dis(test_file_idx));
     if (strcmp(real_expression, test_expression))
         accuracy = accuracy + 1;
     end
