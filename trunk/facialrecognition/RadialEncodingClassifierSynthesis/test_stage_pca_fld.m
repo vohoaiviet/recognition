@@ -78,6 +78,7 @@ for test_file_idx = 1 : test_file_num
     train_vec_num = size(fld_projected, 1);
     
     nearest_block = zeros(train_vec_num, 1, 'uint8');
+    nearest_fr = zeros(class_num, 1);
     for local_block_idx = 1 : block_num * 3
         temp_projected = fld_projected(:, :, local_block_idx);
 %         dis = realmax;
@@ -95,10 +96,15 @@ for test_file_idx = 1 : test_file_num
         nearest_block(index(1)) = nearest_block(index(1)) + 3;
         nearest_block(index(2)) = nearest_block(index(2)) + 2;
         nearest_block(index(3)) = nearest_block(index(3)) + 1;
+        
+%         nearest_fr(class_label(index(1))) = nearest_fr(class_label(index(1))) + 3;
+%         nearest_fr(class_label(index(2))) = nearest_fr(class_label(index(2))) + 2;
+%         nearest_fr(class_label(index(3))) = nearest_fr(class_label(index(3))) + 1;
         %nearest_block(temp) = nearest_block(temp) + 1;
     end
     
     [min_dis(test_file_idx), min_idx(test_file_idx)] = max(nearest_block);
+%     [min_dis(test_file_idx), min_idx(test_file_idx)] = max(nearest_fr);
 end
 
 % a map from facial expression to label;
@@ -116,6 +122,7 @@ accuracy = 0;
 for test_file_idx = 1 : test_file_num
     real_expression = test_file_name(test_file_idx).name(4 : 5);
     test_expression = label_map{(class_label(min_idx(test_file_idx)))};
+    % test_expression = label_map{min_idx(test_file_idx)};
     fprintf('real expression: %s, test expression: %s, minnimum distance %f\n', real_expression, test_expression, min_dis(test_file_idx));
     if (strcmp(real_expression, test_expression))
         accuracy = accuracy + 1;
