@@ -1,4 +1,4 @@
-function [accuracy] = test_stage(test_set_path, facial_feature, fld_projected, pca_matrix1, fld_matrix, pca_matrix2, rfld_matrix, class_label, ratio)
+function [accuracy] = test_stage_pca_fld(test_set_path, fld_projected, pca_matrix1, fld_matrix, class_label, ratio)
 %% TEST STAGE is the training stage of facial recognition system
 %test_set_path      ---the path of the test set directory
 %ratio      ---used in partition
@@ -26,6 +26,7 @@ min_idx = zeros(test_file_num, 1, 'uint8');
 % gabor filter mask
 gabor_mask = GenGaborFilter;
 
+temp = 0;
 for test_file_idx = 1 : test_file_num
     test_file = imread([test_set_path, '\', test_file_name(test_file_idx).name]);
     fprintf('Loading test image: %s... \n', test_file_name(test_file_idx).name);
@@ -74,52 +75,30 @@ for test_file_idx = 1 : test_file_num
     % local classifier k-nearest neighbor(KNN) with k = 1. Th ouput of KNN
     % is C-Dimensional vector as estimated probabilities of the C classes.
     % see formula (4)
-    local_classifiers_output = zeros(class_num, block_num * 3);
     train_vec_num = size(fld_projected, 1);
     
-    dis = zeros(class_num, 1);
-    probabilities = zeros(class_num, 1);
+    nearest_block = zeros(train_vec_num, 1, 'uint8');
     for local_block_idx = 1 : block_num * 3
         temp_projected = fld_projected(:, :, local_block_idx);
-        dis(1 : class_num) = realmax;
+%         dis = realmax;
+        dist_all = zeros(train_vec_num, 1);
         for train_vec_idx = 1 : train_vec_num
             distance = norm(fld_projected_local_features(local_block_idx, :) - temp_projected(train_vec_idx, :));
-            dis(class_label(train_vec_idx)) = min(dis(class_label(train_vec_idx)), distance);
+            dist_all(train_vec_idx) = distance;
+%             if (dis > distance)
+%                 dis = distance;
+%                 %temp = train_vec_idx;
+%                 % fprintf('block_idx: %d, train_vec_idx: %d, distance: %f\n', local_block_idx, train_vec_idx, distance); 
+%             end
         end
-        
-        denominator = 0;
-        for i = 1 : class_num
-            denominator = denominator + 1 / (dis(i) + 1);
-        end 
-        
-        for pro_idx = 1 : class_num
-            probabilities(pro_idx) = 1 / (dis(i) + 1) / denominator;
-        end
-        local_classifiers_output(:, local_block_idx) = probabilities;
+        [~, index] = sort(dist_all);
+        nearest_block(index(1)) = nearest_block(index(1)) + 3;
+        nearest_block(index(2)) = nearest_block(index(2)) + 2;
+        nearest_block(index(3)) = nearest_block(index(3)) + 1;
+        %nearest_block(temp) = nearest_block(temp) + 1;
     end
     
-    % concatenating the outputs of all local classifiers to generate its
-    % intermediate feature matrix
-    intermediate_feature = local_classifiers_output(:);
-    
-    % apply PCA to project the intermediate feature matrice on to
-    % low_dimensional subspace.
-    pca2_projected_global_features = intermediate_feature' * pca_matrix2;
-    
-    % apply RFLD to project the intermediate feature matrices onto a
-    % discriminating , low-dimensional subspace.
-    rfld_projected_global_features = pca2_projected_global_features * rfld_matrix;
-    
-    % normalized the global features after RFLD to  have zero mean and unit
-    % standard
-    global_features = mapstd(rfld_projected_global_features, 0, 1);
-    
-    % a nearest-neighbor classifier to make final decision-making stage.
-    dis = zeros(train_vec_num, 1);
-    for global_feature_idx = 1 : train_vec_num
-        dis(global_feature_idx) = norm(global_features - facial_feature(global_feature_idx, :));
-    end
-    [min_dis(test_file_idx), min_idx(test_file_idx)] = min(dis);
+    [min_dis(test_file_idx), min_idx(test_file_idx)] = max(nearest_block);
 end
 
 % a map from facial expression to label;
