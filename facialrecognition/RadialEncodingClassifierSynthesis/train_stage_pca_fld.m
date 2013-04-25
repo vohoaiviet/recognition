@@ -1,4 +1,4 @@
-function [fld_projected, pca_matrix1, fld_matrix, class_label] = train_stage_pca_fld(train_set_path, ratio)
+function [fld_projected, pca_matrix1, fld_matrix, class_label] = train_stage_pca_fld(train_set_path, ratio, class_num)
 %% TRAIN_STAGE is the training stage of facial recognition system
 %train_set_path      ---the path of the train set directory
 %ratio      ---used in partition
@@ -64,7 +64,7 @@ end
 %% classifier synthesis
 % generate label file
 class_label = zeros(train_file_num, 1, 'uint8');
-class_num = 7;
+%class_num = 7;
 for train_file_idx = 1 : train_file_num
     switch(train_file_name(train_file_idx).name(4 : 5))
         case 'AN' 
