@@ -20,7 +20,7 @@ end
 % process the function
 facial_image = imread('.\test_fun_pic\YM.HA1.52.tiff');
 [height, width] = size(facial_image);
-ratio = 3;
+ratio = 4;
 [local_blocks, lbw, lbh, block_num, uniform_image] = PreprocessPartition(facial_image, width, height, ratio);
 
 % show the original image
