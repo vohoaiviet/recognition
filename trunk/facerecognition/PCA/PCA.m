@@ -1,8 +1,8 @@
 function [mapped_data, eigenvec] = PCA(data, comp)
 %% PCA used for principal components analysis
-%COMP      ===      number of components selected
-
-% %% program
+% %COMP      ===      number of components selected
+% 
+% % %% program
 % [n, ~] = size(data);
 % 
 % % subtract off the mean for each columns
@@ -26,9 +26,14 @@ function [mapped_data, eigenvec] = PCA(data, comp)
 
 
 
-%% program
+% program
 % get eigenvectors and eigenvalues
-[eigenvec, ~]  = princomp(data, 'econ');
-
+[n, ~] = size(data);
+[eigenvec, mapped_data, eigenval]  = princomp(data, 'econ');
+[~, indice] = sort(eigenval, 'descend');
+eigenvec = eigenvec(:, indice);
 eigenvec = eigenvec(:, 1 : comp);
+col_mean = mean(data);
+data = data - repmat(col_mean, n, 1);
+%mapped_data = mapped_data(:, 1 : comp);
 mapped_data = data * eigenvec;

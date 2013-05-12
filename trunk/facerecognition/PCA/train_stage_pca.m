@@ -1,4 +1,4 @@
-function [projected_face, matrix_pca] = train_stage_pca(train_face_path, label_file_name)
+function [projected_face, matrix_pca, col_mean] = train_stage_pca(train_face_path, label_file_name, comp_num)
 %% TRAIN_STAGE is the training stage of face recognition system
 %train_face_path      ---is the training face folder
 %label_file_name      ---is the label file name
@@ -20,5 +20,6 @@ for i = 1 : train_face_num
 end
 
 %% apply PCA
-[pca_mapped_image, matrix_pca] = PCA(train_image, 160);
+col_mean = mean(train_image);
+[pca_mapped_image, matrix_pca] = PCA(train_image, comp_num);
 projected_face = pca_mapped_image;

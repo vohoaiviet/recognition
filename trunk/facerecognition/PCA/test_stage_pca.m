@@ -1,4 +1,4 @@
-function [accuracy] = test_stage_pca(test_face_path, projected_face, matrix_pca)
+function [accuracy] = test_stage_pca(test_face_path, projected_face, matrix_pca, col_mean, comp_num)
 %% TEST_STAGE_PCA is the training stage of face recognition system using PCA
 %test_face_path      ---is the testing face folder
 %projected_face      ---is the result of train face in train stage
@@ -19,7 +19,8 @@ min_dis = zeros(200, 1);
 min_idx = zeros(200, 1);
 
 %% read each test face and process
-[n, d] = size(projected_face);
+[n, ~] = size(projected_face);
+d = comp_num;
 for i = 1 : file_num
     if (~test_face_name(i).isdir)
         test_face_num = test_face_num + 1;
@@ -29,7 +30,7 @@ for i = 1 : file_num
         test_face = imread([test_face_path, '\', file_name]);
         
         %project test image
-        test_face = double(test_face(:));
+        test_face = double(test_face(:)) - col_mean';
         test_face_projected = test_face' * matrix_pca;
         
         %nearest neighbor classifier
