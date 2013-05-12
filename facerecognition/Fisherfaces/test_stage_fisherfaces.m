@@ -1,5 +1,4 @@
-%function [accuracy] = test_stage_fisherfaces(test_face_path, projected_face, pca_matrix, train_face_name)
-function [accuracy] = test_stage_fisherfaces(test_face_path, projected_face, pca_matrix, fld_matrix, train_face_name)
+function [accuracy] = test_stage_fisherfaces(test_face_path, fisherfaces, pca_matrix, fld_matrix, face_label, comp_num, row_mean)
 %% TEST_STAGE_FISHERFACES is the training stage of face recognition system using Fisherfaces
 %test_face_path      ---is the testing face folder
 %projected_face      ---is the result of train face in train stage
@@ -24,8 +23,10 @@ min_dis = zeros(200, 1);
 min_idx = zeros(200, 1);
 
 
+fld_matrix = fld_matrix(:, 1 : comp_num);
+fisherfaces = fisherfaces(1 : comp_num, :);
 %% read each test face and process
-[n, ~] = size(projected_face);
+[~, n] = size(fisherfaces);
 for i = 1 : file_num
     if (~test_face_name(i).isdir)
         test_face_num = test_face_num + 1;
@@ -36,14 +37,12 @@ for i = 1 : file_num
         
         %project test image using PCA and FLD matrix
         test_face = test_face(:);
-        test_face = test_face / norm(test_face);
-        pca_fld_projected = (test_face' * pca_matrix) * fld_matrix;
-        %pca_fld_projected = test_face' * pca_matrix;
+        pca_fld_projected = fld_matrix' * (pca_matrix' * (test_face - row_mean));
         
         %nearest neighbor classifier
         dis = zeros(n, 1);
         for ii = 1 : n
-            dis(ii) = norm(projected_face(ii, :) - pca_fld_projected);
+            dis(ii) = norm(fisherfaces(:, ii) - pca_fld_projected);
         end
         
         [min_dis(test_face_num), min_idx(test_face_num)] = min(dis);
@@ -53,14 +52,19 @@ end
 
 %% calculate the accuracy and write the result
 % get train face name and indentity
-fid = fopen('result_orl_fisherfaces.txt', 'wt');
+fid = fopen('result_orl.txt', 'wt');
 for i = 1 : test_face_num
-    fprintf(fid, '%s, distance is %d, nearest is %s.', test_face_name(i + 2).name, min_dis(i), cell2mat(train_face_name{min_idx(i),1}));
-    if (abs(min_idx(i) - i) / 5 < 1)
+    res_name = cell2mat(face_label{1, 1}(min_idx(i)));
+    res_end = strfind(res_name, '(');
+    real_name = test_face_name(i + 2).name;
+    real_end = strfind(real_name, '(');
+    fprintf(fid, '%s, distance is %d, nearest is %s.', test_face_name(i + 2).name, min_dis(i), cell2mat(face_label{1, 1}(min_idx(i))));
+    %if (strcmp(res_name(1 : res_end), real_name(1 : real_end)) == 1)
+    if (floor((min_idx(i) - 1) / 5) == floor((i - 1) / 5))
         accuracy = accuracy + 1;
         fprintf(fid, 'recognition correct!\n');
     else
-        fprintf(fid, 'recognition wrong to %s\n', cell2mat(train_face_name{min_idx(i),1}));
+        fprintf(fid, 'recognition wrong to %s\n', cell2mat(face_label{1, 1}(min_idx(i))));
     end
 end
 fclose(fid);

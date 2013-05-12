@@ -1,4 +1,4 @@
-function [W, projected_sample, Sw, Sb, M1, M2, W_t, WW] = FLD(sample, class_label, class_num)
+function [W, projected_sample] = FLD(sample, class_label, class_num)
 %% FLD is  Fisher Linear Discriminant. The objective of FLD is to seek the direction w not only maximizing the between-class scatter of the projected samples, but also minimizing the within-class scatter.
 %sample      ---a set of n d-dimensional samples x1, x2, ..., xn
 %class_label      ---the array contain each sample's class name
@@ -49,10 +49,6 @@ for i = 1 : class_num
     Sw = Si(:, :, i) + Sw;
 end
 
-% overcome over-fitting
-[~, eig_val] = eig(Sw);
-ave_eigv = mean(nonzeros(diag(eig_val)));
-Sw = Sw + ave_eigv;
 
 %% seek the direction w. See formula (8)
 [W, eigenval] = eig(Sw \ Sb);
@@ -60,26 +56,7 @@ Sw = Sw + ave_eigv;
 eigenval = diag(eigenval);
 [~, indice] = sort(eigenval, 'descend');
 W = W(:, indice);
-WW = W;
 
 % return paramaters
 W = W(:, 1 : class_num - 1);
-for i = 1 : class_num - 1
-    W(:, i) = W(:, i) / norm(W(:, i));
-end
-projected_sample = sample' * W;
-
-
-%% code below is used for test
-M1 = Mi(:, 1);
-M2 = Mi(:, 2);
-
-% another method to calculate  betweem-class scatter. See formula (3.48)
-Sb_t = (M1 - M2) * (M1 - M2)';
-[W_t, eigenval_t] = eig(Sw \ Sb_t);
-eigenval_t = diag(eigenval_t);
-[~, indice_t] = sort(eigenval_t, 'descend');
-W_t = W_t(:, indice_t);
-
-% return paramaters
-W_t = W_t(:, 1 : class_num - 1);
+projected_sample = W' * sample;

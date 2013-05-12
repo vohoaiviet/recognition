@@ -1,4 +1,4 @@
-function [pca_rfld_projected_face, pca_matrix, fld_matrix, train_face_name] = train_stage_rfld(train_face_path, label_file_name)
+function [rfisherfaces, pca_matrix, rfld_matrix, train_face_name, row_mean] = train_stage_rfld(train_face_path, label_file_name)
 %% TRAIN_STAGE is the training stage of face recognition system
 %train_face_path      ---is the training face folder
 %label_file_name      ---is the label file name
@@ -15,15 +15,13 @@ function [pca_rfld_projected_face, pca_matrix, fld_matrix, train_face_name] = tr
 %% read images
 disp('Train stage: load image and process');
  
-train_image = zeros(train_face_num, 112 * 92);
+train_image = zeros(112 * 92, train_face_num);
 for i = 1 : train_face_num
      %read train image
      file_name = cell2mat(train_face_name{i,1});
      fprintf('Loading train image : %s...\n', file_name);
      image = double(imread(file_name));
-     image = image(:);
-     image = image / norm(image);
-     train_image(i, :) = image(:);
+     train_image(:, i) = image(:);
 end
 
 
@@ -37,10 +35,10 @@ end
 
 
 %% apply PCA
-[pca_matrix] = princomp(train_image, 'econ');
-pca_matrix = pca_matrix(:, 1 : train_face_num - 40);
-pca_projected_face = train_image * pca_matrix;
+disp('PCA process...');
+[eigenfaces, pca_matrix, row_mean] = PCA(train_image, 40);
 
 
-%% apply FLD
-[fld_matrix, pca_rfld_projected_face] = RFLD(pca_projected_face', class_label, 40, 160);
+%% apply RFLD
+disp('RFLD process...');
+[rfld_matrix, rfisherfaces] = RFLD_REJ(eigenfaces, class_label, 40, 20);
